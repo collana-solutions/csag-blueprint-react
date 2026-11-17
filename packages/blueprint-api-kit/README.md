@@ -3,7 +3,7 @@
 Axios and TanStack Query plumbing for an ASP.NET backend that speaks Problem Details: rich
 error notifications, a preconfigured QueryClient, and the two Orval client factories.
 
-Part of [csag-blueprint-react](https://github.com/neolution-ch/csag-blueprint-react). All
+Part of [csag-blueprint-react](https://github.com/collana-solutions/csag-blueprint-react). All
 packages in that repository are released in lockstep — install them at the same version.
 
 ## Install

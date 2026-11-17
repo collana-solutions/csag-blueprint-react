@@ -3,7 +3,7 @@
 White-label tenant theming: derive a full ten-shade Mantine colour tuple from a single brand
 hex, merge it into a base theme, and emit matching CSS custom properties.
 
-Part of [csag-blueprint-react](https://github.com/neolution-ch/csag-blueprint-react). All
+Part of [csag-blueprint-react](https://github.com/collana-solutions/csag-blueprint-react). All
 packages in that repository are released in lockstep — install them at the same version.
 
 ## Install

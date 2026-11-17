@@ -4,7 +4,7 @@ Zod v4 integration for a .NET backend: the Orval `stringFormat` polyfill, and a 
 map that renders the backend's own FluentValidation vocabulary so client and server messages
 match in every language.
 
-Part of [csag-blueprint-react](https://github.com/neolution-ch/csag-blueprint-react). All
+Part of [csag-blueprint-react](https://github.com/collana-solutions/csag-blueprint-react). All
 packages in that repository are released in lockstep — install them at the same version.
 
 ## Install

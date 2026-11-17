@@ -3,7 +3,7 @@
 TanStack Form + Mantine + Zod form kit: a schema-driven form hook, eleven registered field
 components, server-error mapping and an unsaved-changes guard.
 
-Part of [csag-blueprint-react](https://github.com/neolution-ch/csag-blueprint-react). All
+Part of [csag-blueprint-react](https://github.com/collana-solutions/csag-blueprint-react). All
 packages in that repository are released in lockstep — install them at the same version.
 
 ## Install

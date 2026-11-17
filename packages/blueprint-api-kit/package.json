@@ -11,13 +11,13 @@
   ],
   "license": "MIT",
   "author": "collana solutions AG",
-  "homepage": "https://github.com/neolution-ch/csag-blueprint-react/tree/main/packages/blueprint-api-kit#readme",
+  "homepage": "https://github.com/collana-solutions/csag-blueprint-react/tree/main/packages/blueprint-api-kit#readme",
   "bugs": {
-    "url": "https://github.com/neolution-ch/csag-blueprint-react/issues"
+    "url": "https://github.com/collana-solutions/csag-blueprint-react/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/neolution-ch/csag-blueprint-react.git",
+    "url": "git+https://github.com/collana-solutions/csag-blueprint-react.git",
     "directory": "packages/blueprint-api-kit"
   },
   "type": "module",

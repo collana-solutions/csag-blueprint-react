@@ -4,7 +4,7 @@ RFC 9457 Problem Details vocabulary and the FastEndpoints validation-error parse
 no Mantine — this is the shared kernel the other packages build on, and it exists so the form
 kit can understand a 400 body without taking on the query and notification stack.
 
-Part of [csag-blueprint-react](https://github.com/neolution-ch/csag-blueprint-react). All
+Part of [csag-blueprint-react](https://github.com/collana-solutions/csag-blueprint-react). All
 packages in that repository are released in lockstep — install them at the same version.
 
 ## Install
