@@ -1,11 +1,11 @@
 # csag-blueprint-react
 
 React packages for applications built on the CSAG Blueprint. Extracted from
-[`neolution-ch/csag-blueprint-web`](https://github.com/neolution-ch/csag-blueprint-web) — the
+[`collana-solutions/csag-blueprint-web`](https://github.com/collana-solutions/csag-blueprint-web) — the
 pre-extraction history of every file here lives in that repository.
 
-> **Two organisations, on purpose.** The GitHub org is `neolution-ch`; the npm scope is
-> `@collana-solutions`. Neither derives from the other.
+> **Same name, two organisations.** The GitHub org `collana-solutions` and the npm scope
+> `@collana-solutions` share a name but are separate accounts on GitHub and npmjs.com.
 
 ## Packages
 
@@ -28,7 +28,7 @@ Install them at the same version and upgrade them together.
 
 While on `0.x`: **breaking changes are a `minor`, fixes are a `patch`.** The `alpha`/`beta`/`rc`
 channels are reserved for staging `1.0.0`. This matches the convention in the sibling
-[`Csag.Blueprint`](https://github.com/neolution-ch/Csag.Blueprint) NuGet repository.
+[`Csag.Blueprint`](https://github.com/collana-solutions/Csag.Blueprint) NuGet repository.
 
 ## Local development
 
@@ -59,7 +59,7 @@ resolution — before anything is released to a permanently version-burned npm v
 
 ## Release process
 
-Follows the [neolution-ch release playbook](https://github.com/neolution-ch/release-playbook)
+Follows the [collana-solutions release playbook](https://github.com/collana-solutions/release-playbook)
 (Changesets, public npm variant).
 
 1. Add a changeset to your PR: `pnpm changeset`. CI fails without one.
