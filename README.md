@@ -77,8 +77,9 @@ workflow `release.yml` and the environment `production`, with direct publishing 
 
 - Only the publish job can request the OIDC token. It installs without lifecycle scripts and
   builds nothing. The comments at the top of `release.yml` explain the job layout.
-- `release/**` branches publish backports to the `release-vN` dist-tag in a single job, because
-  changesets refuses a custom dist-tag when it publishes packed artifacts.
+- `release/**` branches publish backports in a single job, because changesets refuses a custom
+  dist-tag when it publishes packed artifacts. `release/v1.x` publishes to the dist-tag
+  `release-v1`, a minor branch such as `release/v1.2.x` to `release-v1.2`.
 - A new package needs the same trusted publisher before its first release:
 
     ```bash
