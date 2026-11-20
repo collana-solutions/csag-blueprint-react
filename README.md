@@ -93,7 +93,7 @@ workflow `release.yml` and the environment `production`, with direct publishing 
 
 | What                                         | Why                                                                                                |
 | -------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| Branch protection on `main` and `release/**` | Require the **Changeset Check**, **Verify** and **Workflow security (zizmor)** status checks.      |
+| Branch protection on `main` and `release/**` | Require the **Changeset Check**, **Verify** and **zizmor** status checks.                          |
 | Environment `production`                     | Allow deployments from `main` and `release/**` only, so no other branch can request an OIDC token. |
 
 Two known holds:

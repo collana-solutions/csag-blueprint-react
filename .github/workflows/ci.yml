@@ -98,7 +98,7 @@ jobs:
   # Static analysis of the workflows themselves (template injection, unpinned actions,
   # excessive permissions). Findings fail the job.
   zizmor:
-    name: Workflow security (zizmor)
+    name: zizmor
     if: github.event_name == 'workflow_dispatch' || !github.event.pull_request.draft
     runs-on: ubuntu-latest
     permissions:
