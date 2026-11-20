@@ -335,6 +335,11 @@ jobs:
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile
 
+      # A run that only updates the version PR does not need the build, but publishing
+      # never depends on the packages' prepack scripts this way.
+      - name: Build
+        run: pnpm run build
+
       # release/v1.x publishes to the dist-tag release-v1. The tag holds only the
       # digits sed extracts, which is why it can go into publish-script below.
       - name: Determine dist-tag
