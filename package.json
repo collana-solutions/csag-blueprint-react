@@ -31,6 +31,7 @@
     "eslint": "^10.9.1",
     "eslint-plugin-react-hooks": "^7.1.1",
     "jsdom": "^30.0.1",
+    "pkg-pr-new": "^0.0.93",
     "prettier": "^3.9.6",
     "publint": "^0.3.16",
     "tsdown": "^0.23.0",

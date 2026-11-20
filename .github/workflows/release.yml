@@ -1,5 +1,17 @@
 name: Release
 
+# Publishes to npm through trusted publishing (OIDC), so no npm token is stored.
+# npmjs.com trusts this workflow file and the `production` environment for every
+# @collana-solutions package in this repo.
+#
+# On main the release is split into jobs, following the changesets automating guide
+# (https://changesets.dev/guide/automating). Only the publish job can request an
+# OIDC token, and it neither builds nor runs dependency install scripts, so code
+# from the dependency tree never runs next to npm publish credentials.
+#
+# release/** branches (backports) publish to a `release-vN` dist-tag instead of
+# `latest`. Changesets refuses a custom dist-tag when it publishes packed
+# artifacts, so the backport job versions, builds and publishes in one job.
 on:
   push:
     branches:
@@ -8,88 +20,215 @@ on:
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
-permissions:
-  contents: write
-  pull-requests: write
-  # Required for npm provenance attestations.
-  id-token: write
+permissions: {}
 
 jobs:
-  release:
-    name: Release
+  select-mode:
+    name: Select mode
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      mode: ${{ steps.select-mode.outputs.mode }}
+      publish-plan-artifact-id: ${{ steps.select-mode.outputs.publish-plan-artifact-id }}
     steps:
+      # Full history with tags: the publish plan skips versions whose git tag exists.
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          # Release jobs never restore a cache that a pull request run could have written.
+          package-manager-cache: false
+
+      # Activates the pnpm version pinned in the root manifest packageManager field.
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      # mode is `version` while changesets are pending, `publish` when package.json
+      # versions are not on npm yet, and `none` otherwise.
+      - name: Select mode
+        id: select-mode
+        uses: changesets/action/select-mode@ae32849d5ba541f9ae29e40e22a623bc13562f51 # v2.1.2
+
+  version:
+    name: Version packages
+    needs: select-mode
+    if: needs.select-mode.outputs.mode == 'version'
+    runs-on: ubuntu-latest
+    # Everything here runs with the App token, so GITHUB_TOKEN needs no access.
+    permissions: {}
+    steps:
+      # The version PR and its commit are attributed to the App, so they re-trigger CI.
       - name: Generate App Token
         id: app-token
-        uses: actions/create-github-app-token@v3
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
         with:
           client-id: ${{ secrets.CHANGESETS_BOT_CLIENT_ID }}
           private-key: ${{ secrets.CHANGESETS_BOT_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
 
+      # Keeps the App token in the git config, because push-with-git-cli pushes with git.
       - name: Checkout
-        uses: actions/checkout@v7.0.1
-        with:
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: # zizmor: ignore[artipacked] push-with-git-cli needs the credentials, and this job uploads no artifact
           fetch-depth: 0
           token: ${{ steps.app-token.outputs.token }}
 
-      # registry-url writes the auth line setup-node needs; the committed .npmrc
-      # supplies the registry itself. Both must name registry.npmjs.org or the
-      # publish silently goes somewhere else.
       - name: Setup Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
-          registry-url: 'https://registry.npmjs.org'
+          # Release jobs never restore a cache that a pull request run could have written.
+          package-manager-cache: false
 
       - name: Enable Corepack
         run: corepack enable
 
       - name: Install Dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --ignore-scripts
 
-      - name: Determine publish config
-        id: publish-config
-        run: |
-          if [[ "${{ github.ref }}" == refs/heads/release/* ]]; then
-            # Extract major version from branch name (e.g., release/v1.x → release-v1)
-            BRANCH="${{ github.ref_name }}"
-            TAG=$(echo "$BRANCH" | sed -n 's|release/v\([0-9]*\)\..*|release-v\1|p')
-            echo "tag=--tag $TAG" >> "$GITHUB_OUTPUT"
-          else
-            echo "tag=" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Create Release Pull Request or Publish
-        id: changesets
-        uses: changesets/action@v2.1.2
+      - name: Create or update the version PR
+        uses: changesets/action/version@ae32849d5ba541f9ae29e40e22a623bc13562f51 # v2.1.2
         with:
-          # The App token must be passed through this input: the action reads only
-          # the input, and the resulting version PR and release commit are attributed
-          # to the App so that they re-trigger CI.
           github-token: ${{ steps.app-token.outputs.token }}
-          publish-script: pnpm exec changeset publish ${{ steps.publish-config.outputs.tag }}
           pr-title: 'chore: version packages'
           commit-message: 'chore: version packages'
           # Push the version commit with the Git CLI rather than the GitHub API.
-          # The API path (the action's default) fails here while creating or updating the
-          # version branch: it issues a delete-a-reference call that comes back
-          # "Reference does not exist" and aborts the run, both against an existing
-          # version branch and against a freshly deleted one. The Git CLI path does the
-          # same work without the ref juggling. The trade-off is that the version commit
-          # is no longer signed with GitHub's GPG key.
+          # The API path fails here while creating or updating the version branch:
+          # it issues a delete-a-reference call that comes back "Reference does not
+          # exist" and aborts the run. The trade-off is that the version commit is
+          # not signed with GitHub's GPG key.
           push-with-git-cli: true
-        env:
-          # GITHUB_TOKEN only authenticates against GitHub Packages. Publishing to the
-          # public registry needs an npm token scoped to @collana-solutions.
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Create release branch on major version bump
-        if: steps.changesets.outputs.published == 'true' && github.ref ==
-          'refs/heads/main'
-        uses: actions/github-script@v9
+  pack:
+    name: Pack packages
+    needs: select-mode
+    if: needs.select-mode.outputs.mode == 'publish'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      pack-dir-artifact-id: ${{ steps.pack.outputs.pack-dir-artifact-id }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          # Release jobs never restore a cache that a pull request run could have written.
+          package-manager-cache: false
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      # Install scripts run here (pnpm-workspace.yaml allows esbuild and unrs-resolver),
+      # because the build needs them. This job has no publish credentials.
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm run build
+
+      # Packs exactly the packages in the publish plan and uploads the tarballs as an artifact.
+      - name: Pack
+        id: pack
+        uses: changesets/action/pack@ae32849d5ba541f9ae29e40e22a623bc13562f51 # v2.1.2
+        with:
+          publish-plan-artifact-id: ${{ needs.select-mode.outputs.publish-plan-artifact-id }}
+
+  publish:
+    name: Publish to npm
+    needs: pack
+    runs-on: ubuntu-latest
+    # npmjs.com only accepts OIDC tokens from this environment.
+    environment: production
+    permissions:
+      # npm trusted publishing. Tags and GitHub Releases use the App token.
+      id-token: write
+    outputs:
+      published: ${{ steps.publish.outputs.published }}
+      published-packages: ${{ steps.publish.outputs.published-packages }}
+    steps:
+      # Release tags are created by the App only, which the tag ruleset relies on.
+      - name: Generate App Token
+        id: app-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ secrets.CHANGESETS_BOT_CLIENT_ID }}
+          private-key: ${{ secrets.CHANGESETS_BOT_PRIVATE_KEY }}
+          permission-contents: write
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      # No registry-url: the committed .npmrc names the registry, and setup-node would
+      # otherwise write an auth line for a token this workflow does not have.
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          # Release jobs never restore a cache that a pull request run could have written.
+          package-manager-cache: false
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      # The publish sub-action runs the changesets CLI from node_modules. Nothing is
+      # built here and no install script runs.
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      # Publishes the packed tarballs. pnpm exchanges the OIDC token for a short-lived
+      # npm token and adds provenance.
+      - name: Publish
+        id: publish
+        uses: changesets/action/publish@ae32849d5ba541f9ae29e40e22a623bc13562f51 # v2.1.2
+        with:
+          github-token: ${{ steps.app-token.outputs.token }}
+          pack-dir-artifact-id: ${{ needs.pack.outputs.pack-dir-artifact-id }}
+
+  release-branch:
+    name: Create release branch on major version bump
+    needs: publish
+    if: needs.publish.outputs.published == 'true'
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: Generate App Token
+        id: app-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ secrets.CHANGESETS_BOT_CLIENT_ID }}
+          private-key: ${{ secrets.CHANGESETS_BOT_PRIVATE_KEY }}
+          permission-contents: write
+
+      - name: Create release branch
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          PUBLISHED_PACKAGES: ${{ needs.publish.outputs.published-packages }}
+        with:
+          github-token: ${{ steps.app-token.outputs.token }}
           script: |
-            const published = JSON.parse('${{ steps.changesets.outputs.published-packages }}');
+            const published = JSON.parse(process.env.PUBLISHED_PACKAGES);
             if (!published.length) return;
 
             const newVersion = published[0].version;
@@ -149,7 +288,7 @@ jobs:
                 });
                 console.log(`Created ${branchName} from tag ${prevTag.name} (${prevTag.commit.sha}).`);
             } catch (e) {
-                // GitHub can refuse GITHUB_TOKEN when branching from an older commit (403). The
+                // GitHub can refuse to create a branch on an older commit (403). The
                 // release itself already succeeded, so warn with the manual command instead of failing.
                 if (e.status !== 403) throw e;
                 core.warning(
@@ -157,3 +296,64 @@ jobs:
                         `Create it by hand: git push origin ${prevTag.commit.sha}:refs/heads/${branchName}`,
                 );
             }
+
+  backport:
+    name: Release backport
+    if: startsWith(github.ref, 'refs/heads/release/')
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      # npm trusted publishing. Tags, releases and the version PR use the App token.
+      id-token: write
+    steps:
+      - name: Generate App Token
+        id: app-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ secrets.CHANGESETS_BOT_CLIENT_ID }}
+          private-key: ${{ secrets.CHANGESETS_BOT_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+
+      # Keeps the App token in the git config, because push-with-git-cli pushes with git.
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: # zizmor: ignore[artipacked] push-with-git-cli needs the credentials, and this job uploads no artifact
+          fetch-depth: 0
+          token: ${{ steps.app-token.outputs.token }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          # Release jobs never restore a cache that a pull request run could have written.
+          package-manager-cache: false
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      # release/v1.x publishes to the dist-tag release-v1. The tag holds only the
+      # digits sed extracts, which is why it can go into publish-script below.
+      - name: Determine dist-tag
+        id: dist-tag
+        env:
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          TAG=$(echo "$BRANCH" | sed -n 's|^release/v\([0-9][0-9]*\)\..*|release-v\1|p')
+          if [ -z "$TAG" ]; then
+            echo "::error::Branch $BRANCH does not match release/vN.x"
+            exit 1
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Create Release Pull Request or Publish
+        uses: changesets/action@ae32849d5ba541f9ae29e40e22a623bc13562f51 # v2.1.2
+        with:
+          github-token: ${{ steps.app-token.outputs.token }}
+          publish-script: pnpm exec changeset publish --tag ${{ steps.dist-tag.outputs.tag }}
+          pr-title: 'chore: version packages'
+          commit-message: 'chore: version packages'
+          push-with-git-cli: true
