@@ -69,18 +69,33 @@ Follows the [collana-solutions release playbook](https://github.com/collana-solu
 Dependabot PRs get a changeset generated automatically. A **manual** dependency bump does not —
 add one yourself.
 
+## Publishing
+
+`release.yml` publishes through npm trusted publishing (OIDC), so no npm token is stored anywhere.
+On npmjs.com every package trusts the repository `collana-solutions/csag-blueprint-react`, the
+workflow `release.yml` and the environment `production`, with direct publishing allowed.
+
+- Only the publish job can request the OIDC token. It installs without lifecycle scripts and
+  builds nothing. The comments at the top of `release.yml` explain the job layout.
+- `release/**` branches publish backports in a single job, because changesets refuses a custom
+  dist-tag when it publishes packed artifacts. `release/v1.x` publishes to the dist-tag
+  `release-v1`, a minor branch such as `release/v1.2.x` to `release-v1.2`.
+- A new package needs the same trusted publisher before its first release:
+
+    ```bash
+    npm trust github @collana-solutions/<name> --repo collana-solutions/csag-blueprint-react \
+      --file release.yml --env production --allow-publish
+    ```
+
+    `npm trust` only accepts packages that already exist on npm. If npmjs.com offers no way to add a
+    trusted publisher to an unpublished name, publish its first version by hand.
+
 ## Setup still outstanding
 
-Nothing can be published until these are done. Listed here rather than in an issue so the
-next person to touch the release pipeline sees them.
-
-| What                                         | Why it blocks                                                                                                                                                                               |
-| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Create the `NPM_TOKEN` secret                | A granular npm token scoped to `@collana-solutions`, read/write. The Release job currently runs with an empty `NODE_AUTH_TOKEN`, which is harmless only while changesets are still pending. |
-| Make the repository public                   | The blueprint app's docs deep-link into these files at their release tags, the way `docs/security/CSRF.md` already does for the NuGet sibling.                                              |
-| Branch protection on `main` and `release/**` | Require the **Changeset Check** and **Verify** status checks. They only become selectable once CI has run, which it now has.                                                                |
-| Add `CHANGESETS_BOT_*` as Dependabot secrets | Dependabot has a secret store separate from Actions, and cannot read Actions secrets.                                                                                                       |
-| Install the pkg.pr.new GitHub App            | `.github/workflows/pkg.pr.new.yml` is parked behind `workflow_dispatch` until then; it fails with a 404 without the App. The file carries the triggers to restore.                          |
+| What                                         | Why                                                                                                |
+| -------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| Branch protection on `main` and `release/**` | Require the **Changeset Check**, **Verify** and **zizmor** status checks.                          |
+| Environment `production`                     | Allow deployments from `main` and `release/**` only, so no other branch can request an OIDC token. |
 
 Two known holds:
 
