@@ -1,5 +1,13 @@
 # @collana-solutions/blueprint-api-kit
 
+## 0.3.1
+
+### Patch Changes
+
+- [#31](https://github.com/collana-solutions/csag-blueprint-react/pull/31) [`a13b026`](https://github.com/collana-solutions/csag-blueprint-react/commit/a13b0266c9939629c07f5d4f1c36fbd703191fd8) Thanks [@neotrow](https://github.com/neotrow)! - Published from GitHub Actions through npm trusted publishing, with provenance. The code is the same as in 0.3.0.
+- Updated dependencies [[`a13b026`](https://github.com/collana-solutions/csag-blueprint-react/commit/a13b0266c9939629c07f5d4f1c36fbd703191fd8)]:
+  - @collana-solutions/blueprint-core@0.3.1
+
 ## 0.3.0
 
 ### Patch Changes
