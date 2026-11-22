@@ -1,5 +1,11 @@
 # @collana-solutions/blueprint-i18n
 
+## 0.3.1
+
+### Patch Changes
+
+- [#31](https://github.com/collana-solutions/csag-blueprint-react/pull/31) [`a13b026`](https://github.com/collana-solutions/csag-blueprint-react/commit/a13b0266c9939629c07f5d4f1c36fbd703191fd8) Thanks [@neotrow](https://github.com/neotrow)! - Published from GitHub Actions through npm trusted publishing, with provenance. The code is the same as in 0.3.0.
+
 ## 0.3.0
 
 No changes in this release.
